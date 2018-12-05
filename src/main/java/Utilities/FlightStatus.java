@@ -1,0 +1,6 @@
+package Utilities;
+
+public enum FlightStatus {
+    DELAYED,CHECKINGIN,BOARDING,CANCELLED,SCHEDULED,DEPARTED,ARRIVED
+}
+

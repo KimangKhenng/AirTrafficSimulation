@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+
+<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="1200.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="MainWindows.MainController">
+  <tabs>
+    <Tab text="Agent Management">
+      <content>
+        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+               <children>
+                  <VBox prefHeight="561.0" prefWidth="1200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                     <children>
+                        <TableView fx:id="flyStatus" prefHeight="561.0" prefWidth="1200.0">
+                          <columns>
+                            <TableColumn fx:id="aircraftCol" prefWidth="146.0" text="Aircraft" />
+                            <TableColumn minWidth="0.0" prefWidth="0.0" text="Origin" />
+                              <TableColumn prefWidth="328.0" text="GPS Location">
+                                 <columns>
+                                    <TableColumn fx:id="latitudeCol" prefWidth="97.0" text="latitude" />
+                                    <TableColumn fx:id="longitudeCol" prefWidth="122.0" text="Longitude" />
+                                    <TableColumn fx:id="wayPoint" prefWidth="94.0" text="Waypoint" />
+                                    <TableColumn fx:id="speedCol" prefWidth="57.0" text="Speed(Km/h)" />
+                                 </columns>
+                              </TableColumn>
+                              <TableColumn prefWidth="203.0" text="Distance(Km)">
+                                 <columns>
+                                    <TableColumn fx:id="totalCol" prefWidth="73.0" text="Total" />
+                                    <TableColumn fx:id="remainingCol" prefWidth="77.0" text="Remaining" />
+                                 </columns>
+                              </TableColumn>
+                              <TableColumn prefWidth="207.0" text="Schedule">
+                                 <columns>
+                                    <TableColumn fx:id="originCol" prefWidth="76.0" text="Origin" />
+                                    <TableColumn fx:id="destinationCol" prefWidth="131.0" text="Destination" />
+                                    <TableColumn fx:id="statusCol" minWidth="0.0" prefWidth="53.0" text="Status" />
+                                 </columns>
+                              </TableColumn>
+                          </columns>
+                        </TableView>
+                     </children>
+                  </VBox>
+               </children></AnchorPane>
+      </content>
+    </Tab>
+  </tabs>
+</TabPane>
