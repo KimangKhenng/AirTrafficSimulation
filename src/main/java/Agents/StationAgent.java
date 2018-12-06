@@ -66,6 +66,7 @@ public class StationAgent extends BaseAgent{
                             reply.setConversationId(AgentMessage.runWayRequestId);
                             reply.setPerformative(ACLMessage.AGREE);
                             reply.setContent(AgentMessage.runWayOfferMessage + i);
+                            //System.out.println("Sent request to: " + runWay.get(i));
                             myAgent.send(reply);
                             runWay.set(0,false);
                         }else {
@@ -151,7 +152,7 @@ public class StationAgent extends BaseAgent{
         // Add Behaviour
         addBehaviour(new InitiateAircraft());
         addBehaviour(new runWayRequestServer());
-        addBehaviour(new AreaProximityBehavior(this,1000));
+        //addBehaviour(new AreaProximityBehavior(this,1000));
         //addBehaviour(new informGUIPosition());
     }
 

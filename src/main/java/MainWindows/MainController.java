@@ -4,15 +4,22 @@ import GUI.AgentInterface;
 import Utilities.AgentContainer;
 import Utilities.Aircraft;
 import Utilities.ScheduleFactory;
+import com.esri.arcgisruntime.mapping.ArcGISMap;
+import com.esri.arcgisruntime.mapping.Basemap;
+import com.esri.arcgisruntime.mapping.view.MapView;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+
 import java.util.*;
 
-public class MainController {
+public class MainController  {
+
     private AgentContainer container;
     @FXML
     private TableView<Aircraft> flyStatus;
@@ -37,9 +44,28 @@ public class MainController {
     @FXML
     private TableColumn<Aircraft,Double> remainingCol;
 
+    @FXML
+    private StackPane mapViewPane;
+
+    @FXML
+    private VBox vBox;
+
+    /**
+     * ArcGIS Map
+     */
+    private MapViewr mapViewr;
+
+
+
 
     @FXML
     private void initialize(){
+        /**
+         * Initialize Map
+         */
+        mapViewr = new MapViewr();
+        mapViewPane.getChildren().setAll(mapViewr.getMapView());
+
         /**
          * Set property of table column
          */
@@ -70,6 +96,7 @@ public class MainController {
             public void run() {
                 flyStatus.getItems().clear();
                 flyStatus.setItems(AgentInterface.getInstance().getData());
+                mapViewr.updatePlane(AgentInterface.getInstance().getData());
             }
         };
         Timer timer = new Timer("Timer");
@@ -78,5 +105,7 @@ public class MainController {
         long period = 1000L;
         timer.scheduleAtFixedRate(repeatedTask, delay, period);
     }
+
+
 
 }

@@ -88,7 +88,7 @@ public class AircraftAgent extends BaseAgent {
          * Add behavior
          */
         addBehaviour(new statusChecker());
-        addBehaviour(new updateStatus(this, 3000));
+        //addBehaviour(new updateStatus(this, 3000));
         //addBehaviour(new AreaProximityBehavior(this,1000));
         addBehaviour(new informAgentInterface(this, 1000));
 
@@ -119,7 +119,8 @@ public class AircraftAgent extends BaseAgent {
         /**
          * positionUpdateBehavior
          */
-        LatLng nextPos;
+        private LatLng nextPos;
+
 
         public positionUpdateBehaviour(Agent a, long period) {
             super(a, period);
@@ -127,12 +128,17 @@ public class AircraftAgent extends BaseAgent {
         }
 
         protected void onTick() {
-            if (LatLngTool.distance(position, nextPos, LengthUnit.KILOMETER) <= 1.0) {
-                //currentWayPoint += 1;
-                nextPos = currentSchedule.getFlightTrajectories().get(++currentWayPoint);
+            //System.out.println("Current way point: " + currentWayPoint);
+            //System.out.println("Lat Long: " + position);
+            //System.out.println("Distance: " + (int)LatLngTool.distance(position, nextPos, LengthUnit.KILOMETER) );
+            if ( (int)LatLngTool.distance(position, nextPos, LengthUnit.KILOMETER) == 0) {
+                //System.out.println("Called from: " + getLocalName());
+                currentWayPoint += 1;
+                nextPos = currentSchedule.getFlightTrajectories().get(currentWayPoint);
             }
             double dx = (nextPos.getLatitude() - position.getLatitude())/ speed;
             double dy = (nextPos.getLongitude() - position.getLongitude()) / speed;
+            double distanceTravelled = Math.sqrt(dx*dx + dy*dy);
             position.setLatitudeLongitude(position.getLatitude() + dx, position.getLongitude() + dy);
             remainingDistance = remainingDistance(position);
         }
@@ -205,6 +211,7 @@ public class AircraftAgent extends BaseAgent {
                      * Prepare to fly
                      */
                     if (!boarding) {
+
                         MessageTemplate template = MessageTemplate.MatchConversationId(AgentMessage.runWayRequestId);
                         ACLMessage msg = receive(template);
                         if (msg != null) {
@@ -290,7 +297,7 @@ public class AircraftAgent extends BaseAgent {
         public void action() {
             ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
 
-            msg.setContent(AgentMessage.runWayReleaseMessage);
+            msg.setContent(AgentMessage.runWayRequestMessage);
             msg.setLanguage("English");
             msg.setConversationId(AgentMessage.runWayRequestId);
             /**
@@ -320,7 +327,7 @@ public class AircraftAgent extends BaseAgent {
         double totalDistance = 0.0;
         List<LatLng> flightSchedules = currentSchedule.getFlightTrajectories();
         flightSchedules.set(currentWayPoint,position);
-        for(int i = 0 ; i < flightSchedules.size() && i != flightSchedules.size() - 2 ; ++i){
+        for(int i = 0 ; i < flightSchedules.size() -1 ; ++i){
             totalDistance += LatLngTool.distance(flightSchedules.get(i),flightSchedules.get(i+1), LengthUnit.KILOMETER);
         }
         return totalDistance;
@@ -352,7 +359,7 @@ public class AircraftAgent extends BaseAgent {
              * Update Info
              */
             System.out.println(myAgent.getLocalName());
-            //System.out.println("Status: " + currentSchedule.getStatus());
+            System.out.println("Status: " + currentSchedule.getStatus());
             System.out.println(myAgent.getLocalName() + "Lat: " + position.getLatitude() + "Long: " + position.getLongitude());
             System.out.println("My current way point: " + currentWayPoint);
         }

@@ -108,7 +108,7 @@ public class FlightSchedule {
 
     public double getDistance() {
         Double totalDistance = 0.0;
-        for(int i = 0 ; i < flightTrajectories.size() && i != flightTrajectories.size() - 2 ; ++i){
+        for(int i = 0 ; i < flightTrajectories.size() -1 ; ++i){
             Double distance = LatLngTool.distance(flightTrajectories.get(i),flightTrajectories.get(i+1), LengthUnit.KILOMETER);
             totalDistance += distance;
         }
