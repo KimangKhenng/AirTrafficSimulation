@@ -4,11 +4,7 @@ import GUI.AgentInterface;
 import Utilities.AgentContainer;
 import Utilities.Aircraft;
 import Utilities.ScheduleFactory;
-import com.esri.arcgisruntime.mapping.ArcGISMap;
-import com.esri.arcgisruntime.mapping.Basemap;
-import com.esri.arcgisruntime.mapping.view.MapView;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -80,12 +76,9 @@ public class MainController  {
         totalCol.setCellValueFactory(new PropertyValueFactory<>("totalDistance"));
         remainingCol.setCellValueFactory(new PropertyValueFactory<>("remainingDistance"));
 
-        flyStatus.setItems(getAircrafts());
+        flyStatus.setItems(FXCollections.observableArrayList(ScheduleFactory.getAllAircraft()));
         updateInfo();
         container = new AgentContainer();
-    }
-    private ObservableList<Aircraft> getAircrafts(){
-        return FXCollections.observableArrayList(ScheduleFactory.getAllAircraft());
     }
 
     public void updateInfo(){

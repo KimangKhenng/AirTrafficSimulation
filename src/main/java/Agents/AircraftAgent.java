@@ -143,22 +143,6 @@ public class AircraftAgent extends BaseAgent {
             remainingDistance = remainingDistance(position);
         }
     }
-//    private class positionUpdateBehaviour extends CyclicBehaviour {
-//        /**
-//         * positionUpdateBehavior
-//         */
-//        LatLng nextPos;
-//
-//        public void action() {
-//            if (LatLngTool.distance(position, nextPos, LengthUnit.KILOMETER) <= 1.0) {
-//                //currentWayPoint += 1;
-//                nextPos = currentSchedule.getFlightTrajectories().get(++currentWayPoint);
-//            }
-//            double dx = (nextPos.getLatitude() - position.getLatitude()) / speed;
-//            double dy = (nextPos.getLongitude() - position.getLongitude()) / speed;
-//            position.setLatitudeLongitude(position.getLatitude() + dx, position.getLongitude() + dy);
-//        }
-//    }
     private class walkWithOtherAgents extends TickerBehaviour{
 
     public walkWithOtherAgents(Agent a, long period) {
