@@ -9,4 +9,8 @@ public interface AgentMessage {
     String stationAgentType ="I am station agent";
     String aircraftAgentType = "I am aircraft agent";
     String guiAgentType = "I am GUI agnet";
+    String locationRequestID = "What is your current runway?";
+    String routeSwitchingRequestID = "Can you change the route to avoid collision?";
+    String cantSwitchRouteID = "I cannot switch my route because I am in special condition";
+    String getLocationRequestAnswerID = "This is my coordinates";
 }

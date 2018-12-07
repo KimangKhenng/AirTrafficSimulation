@@ -3,6 +3,8 @@ package Agents;
 import Utilities.AgentMessage;
 import com.javadocmd.simplelatlng.LatLng;
 import jade.core.Agent;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
 import java.text.DateFormat;
 
@@ -46,11 +48,19 @@ public abstract class BaseAgent extends Agent {
     // Diameter (in Kilometer) used to determined surrounding area for calculating area proximity
     protected double alertZone = 0;
     protected double dangerZone = 0;
-
+    MessageTemplate LocationReqestTemplate;
+    MessageTemplate routeSwitchingTemplate;
+    MessageTemplate refuseRouteSwitchingTemplate;
+    MessageTemplate locationAnswer;
     @Override
     protected void setup() {
         super.setup();
         setEnabledO2ACommunication(true,0);
+        LocationReqestTemplate = MessageTemplate.MatchConversationId(AgentMessage.locationRequestID);
+        routeSwitchingTemplate = MessageTemplate.MatchConversationId(AgentMessage.routeSwitchingRequestID);
+        refuseRouteSwitchingTemplate = MessageTemplate.MatchConversationId(AgentMessage.cantSwitchRouteID);
+        locationAnswer = MessageTemplate.MatchConversationId(AgentMessage.getLocationRequestAnswerID);
+
     }
 
 }

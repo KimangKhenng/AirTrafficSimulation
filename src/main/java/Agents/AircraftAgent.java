@@ -1,16 +1,14 @@
 package Agents;
 
 import GUI.AgentInterface;
-import Utilities.AgentMessage;
-import Utilities.FlightSchedule;
-import Utilities.FlightStatus;
-import Utilities.ScheduleFactory;
+import Utilities.*;
 import com.javadocmd.simplelatlng.LatLng;
 import com.javadocmd.simplelatlng.LatLngTool;
 import com.javadocmd.simplelatlng.util.LengthUnit;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.ParallelBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -18,7 +16,6 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -37,12 +34,24 @@ public class AircraftAgent extends BaseAgent {
     private int currentWayPoint;
     private double speed;
     private double altitude;
+
+    private LatLng nextPos;
+
     private LocalDateTime departTime;
     private LocalDateTime ArrivalTime;
     // Aircraft Flight Schedule
     //private List<FlightSchedule> schedule;
     private FlightSchedule currentSchedule;
     private double remainingDistance;
+
+    private boolean departed;
+    private boolean runwayRequested;
+    private boolean boarding;
+    private boolean arrived;
+    private boolean runwayGranted;
+
+    DFAgentDescription dfAgentDescription;
+    ServiceDescription serviceDescription;
 
     // Aircraft Actual Arrive/Departure Information
 
@@ -72,11 +81,12 @@ public class AircraftAgent extends BaseAgent {
         /**
          * Register with DF
          */
-        DFAgentDescription dfAgentDescription = new DFAgentDescription();
+        dfAgentDescription = new DFAgentDescription();
         dfAgentDescription.setName(getAID());
-        ServiceDescription serviceDescription = new ServiceDescription();
+        serviceDescription = new ServiceDescription();
         serviceDescription.setType(AgentMessage.aircraftAgentType);
-        serviceDescription.setName(getLocalName() + AgentMessage.stationAgentType);
+        serviceDescription.setName(getLocalName() +"-"+currentSchedule.getFlightName());
+        serviceDescription.addOntologies(currentSchedule.getDestination().getName());
         dfAgentDescription.addServices(serviceDescription);
         try {
             DFService.register(this, dfAgentDescription);
@@ -91,6 +101,7 @@ public class AircraftAgent extends BaseAgent {
         //addBehaviour(new updateStatus(this, 3000));
         //addBehaviour(new AreaProximityBehavior(this,1000));
         addBehaviour(new informAgentInterface(this, 1000));
+        addBehaviour(new TalkWithOtherAgents(this,1000));
 
     }
 
@@ -119,9 +130,6 @@ public class AircraftAgent extends BaseAgent {
         /**
          * positionUpdateBehavior
          */
-        private LatLng nextPos;
-
-
         public positionUpdateBehaviour(Agent a, long period) {
             super(a, period);
             nextPos = currentSchedule.getFlightTrajectories().get(currentWayPoint + 1);
@@ -138,31 +146,166 @@ public class AircraftAgent extends BaseAgent {
             }
             double dx = (nextPos.getLatitude() - position.getLatitude())/ speed;
             double dy = (nextPos.getLongitude() - position.getLongitude()) / speed;
-            double distanceTravelled = Math.sqrt(dx*dx + dy*dy);
             position.setLatitudeLongitude(position.getLatitude() + dx, position.getLongitude() + dy);
             remainingDistance = remainingDistance(position);
         }
     }
-    private class walkWithOtherAgents extends TickerBehaviour{
+    private class TalkWithOtherAgents extends TickerBehaviour{
 
-    public walkWithOtherAgents(Agent a, long period) {
+        public TalkWithOtherAgents(Agent a, long period) {
         super(a, period);
     }
 
-    @Override
-    protected void onTick() {
+        @Override
+        protected void onTick() {
+            /**
+             * Inform position
+             */
+            if(departed){
+                addBehaviour(new InformPosition());
+                addBehaviour(new askingOtherAircraftPosition());
+                ParallelBehaviour quickCheck = new ParallelBehaviour();
+                quickCheck.addSubBehaviour(new OneShotBehaviour() {
+                    @Override
+                    public void action() {
+                        /**
+                         * Calculate distance
+                         */
+                        ACLMessage message = receive(locationAnswer);
+                        if(message != null){
+                            //System.out.println("Me: " + getLocalName() + " Sender: " + message.getSender().getLocalName());
+                            //System.out.println("Ontology " + message.getOntology());
+                            //System.out.println(message.getContent());
+                            if(message.getOntology() != null){
+                                String[] msg = message.getOntology().split("-");
+                                if(msg.length > 0){
+                                    LatLng location = new LatLng(Double.parseDouble(msg[0]),Double.parseDouble(msg[1]));
+                                    double distance = LatLngTool.distance(position,location,LengthUnit.KILOMETER);
+                                    System.out.println("Your distance: " + distance);
+                                    if(distance < 50.0){
+                                        System.out.println("Request to change route");
+                                        ACLMessage request = message.createReply();
+                                        request.setPerformative(ACLMessage.REQUEST);
+                                        request.setConversationId(AgentMessage.routeSwitchingRequestID);
+                                        request.setContent(AgentMessage.routeSwitchingRequestID);
+                                        myAgent.send(request);
+                                    }
+
+                                }
+                            }
+
+
+
+
+                        }
+                    }
+                });
+                quickCheck.addSubBehaviour(new OneShotBehaviour() {
+                    @Override
+                    public void action() {
+                        /**
+                         * Handle Request
+                         */
+                        ACLMessage message = receive(routeSwitchingTemplate);
+
+                        if(message != null){
+                            System.out.println(message.getContent());
+                            if(message.getContent().equals(AgentMessage.routeSwitchingRequestID)){
+                                System.out.println("Receive request to switch route: Processing");
+                                if(currentSchedule.getFlightType().equals(FlightType.Commerical.name())){
+                                    /**
+                                     * Agree to switch
+                                     * increase latitude by 0.5 south
+                                     */
+                                    altitude -= 20;
+                                    //nextPos.setLatitudeLongitude(nextPos.getLatitude() - 0.5,nextPos.getLongitude() - 0.5);
+                                }else{
+                                    ACLMessage reply = message.createReply();
+                                    reply.setPerformative(ACLMessage.REFUSE);
+                                    reply.setConversationId(AgentMessage.cantSwitchRouteID);
+                                    reply.setContent(AgentMessage.cantSwitchRouteID);
+                                    myAgent.send(reply);
+                                }
+                            }
+                        }
+                    }
+                });
+                quickCheck.addSubBehaviour(new OneShotBehaviour() {
+                    @Override
+                    public void action() {
+                        ACLMessage message = receive(refuseRouteSwitchingTemplate);
+                        if(message != null){
+                            if(message.getContent().equals(AgentMessage.cantSwitchRouteID)){
+                                /**
+                                 * Switch it own route instead
+                                 * Go to north
+                                 */
+                                altitude += 20;
+                                //nextPos.setLatitudeLongitude(nextPos.getLatitude() + 0.5,nextPos.getLongitude() + 0.5);
+
+                            }
+                        }
+                    }
+                });
+                addBehaviour(quickCheck);
+
+
+            }
+
+
+
+
+        }
 
     }
-}
+
+    private class askingOtherAircraftPosition extends OneShotBehaviour{
+        /**
+         * Request other aircraft position which is travelling on the same path
+         */
+        @Override
+        public void action() {
+            DFAgentDescription description = new DFAgentDescription();
+            ServiceDescription serviceDescription = new ServiceDescription();
+            serviceDescription.addOntologies(currentSchedule.getOrigin().getName());
+            description.addServices(serviceDescription);
+            try {
+                DFAgentDescription[] result = DFService.search(myAgent, description);
+                if (result.length > 0) {
+                    for (int i = 0 ; i < result.length ; i++){
+                        ACLMessage message = new ACLMessage(ACLMessage.REQUEST);
+                        message.setConversationId(AgentMessage.locationRequestID);
+                        message.addReceiver(result[i].getName());
+                        myAgent.send(message);
+                    }
+                } else {
+                    System.out.println("No Agent");
+                }
+            } catch (FIPAException fe) {
+                fe.printStackTrace();
+            }
+        }
+    }
+    private class InformPosition extends OneShotBehaviour{
+        @Override
+        public void action() {
+            ACLMessage message = receive(LocationReqestTemplate);
+            if(message != null){
+                ACLMessage reply = message.createReply();
+                reply.setConversationId(AgentMessage.getLocationRequestAnswerID);
+                reply.setPerformative(ACLMessage.INFORM);
+                reply.setContent(Integer.toString(currentWayPoint) +"-"+ Integer.toString(currentSchedule.getWayPoints()));
+                reply.setOntology(position.getLatitude()+"-"+position.getLongitude());
+                myAgent.send(reply);
+            }else{
+                block();
+            }
+        }
+    }
 
     private class statusChecker extends CyclicBehaviour {
         private int runway;
         private int delayTime;
-        private boolean runwayRequested;
-        private boolean boarding;
-        private boolean departed;
-        private boolean arrived;
-
         @Override
         public void action() {
             /**
@@ -172,9 +315,9 @@ public class AircraftAgent extends BaseAgent {
                 int remainingTime = currentSchedule.getDepartTime().getSecond() - LocalDateTime.now().getSecond() + delayTime;
                 int checkInTime = ScheduleFactory.agentStartTime - 2;
                 int boardingTime = ScheduleFactory.agentStartTime - 5;
-                //System.out.println("Remaining Time: " + remainingTime);
-                //System.out.println("Checking Time: " + checkInTime);
-                //System.out.println("Boarding Time: " + boardingTime);
+//                System.out.println("Remaining Time: " + remainingTime);
+//                System.out.println("Checking Time: " + checkInTime);
+//                System.out.println("Boarding Time: " + boardingTime);
                 if (remainingTime >= checkInTime) {
                     /**
                      * Call for check-in
@@ -204,6 +347,7 @@ public class AircraftAgent extends BaseAgent {
                                 String runWay = msg.getContent().split(":")[1];
                                 runway = Integer.parseInt(runWay);
                                 System.out.println("Will depart on Runway: " + runway);
+                                runwayGranted = true;
                                 boarding = true;
                             } else if (msg.getPerformative() == ACLMessage.REFUSE) {
                                 /**
@@ -218,7 +362,7 @@ public class AircraftAgent extends BaseAgent {
                     }
 
                 }
-                if (remainingTime == 0) {
+                if (remainingTime == 0 && runwayGranted ) {
                     currentSchedule.setStatus(FlightStatus.DEPARTED);
                     positionUpdateBehaviour = new positionUpdateBehaviour(myAgent, TIME_STEP);
                     //positionUpdateBehaviour = new positionUpdateBehaviour();
@@ -247,12 +391,6 @@ public class AircraftAgent extends BaseAgent {
                     addBehaviour(new runWayRequest(currentSchedule.getDestination().getName()));
                     arrived = true;
                 }
-            }
-            if (currentWayPoint == currentSchedule.getWayPoints()) {
-                myAgent.removeBehaviour(positionUpdateBehaviour);
-                currentSchedule.setStatus(FlightStatus.ARRIVED);
-                ArrivalTime = LocalDateTime.now();
-                myAgent.removeBehaviour(this);
             }
         }
 

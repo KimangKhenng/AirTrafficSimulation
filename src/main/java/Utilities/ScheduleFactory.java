@@ -124,6 +124,16 @@ public class ScheduleFactory {
         return aircraftList;
     }
 
+    public static Aircraft searchAircraft(String name){
+        List<Aircraft> list = getAllAircraft();
+        for(int i = 0 ; i < list.size() ; i++){
+            if(list.get(i).getName().equals(name)){
+                return list.get(i);
+            }
+        }
+        return new Aircraft();
+    }
+
     public static void main(String args[]){
         List<FlightSchedule> schedules = generateSchedules();
         for(int i = 0 ; i < schedules.size() ; ++i){

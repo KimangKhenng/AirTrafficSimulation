@@ -1,14 +1,9 @@
 package Agents;
 
 
-import Utilities.AgentMessage;
-import Utilities.Airport;
-import Utilities.FlightSchedule;
-import Utilities.ScheduleFactory;
+import Utilities.*;
 import jade.core.Agent;
-import jade.core.behaviours.CyclicBehaviour;
-import jade.core.behaviours.OneShotBehaviour;
-import jade.core.behaviours.TickerBehaviour;
+import jade.core.behaviours.*;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
@@ -18,10 +13,17 @@ import jade.lang.acl.MessageTemplate;
 import jade.wrapper.AgentController;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
 
 public class StationAgent extends BaseAgent{
+    /**
+     * Member variable
+     */
+    private List<Aircraft> aircraftAgent;
+    private List<Boolean> runWay;
+    private Airport airport;
+    private DFAgentDescription aircraftTemplate;
+    private ServiceDescription aircraftdescription;
 
     /**
      * Inner Class
@@ -38,7 +40,7 @@ public class StationAgent extends BaseAgent{
                 try {
                     AgentController controller = myAgent.getContainerController().createNewAgent(agentName,"Agents.AircraftAgent",
                             new Object[]{ScheduleFactory.searchSchedule(myAgent.getLocalName()).get(i)});
-                    aircraftAgent.add(agentName);
+                            aircraftAgent.add(ScheduleFactory.searchAircraft(agentName));
                     controller.start();
                 }catch (Exception e){
                     e.printStackTrace();
@@ -84,37 +86,73 @@ public class StationAgent extends BaseAgent{
         }
     }
     private class talkWithOtherAgent extends TickerBehaviour{
+
+        SequentialBehaviour behaviour;
+
+        @Override
+        public void onStart() {
+            super.onStart();
+            behaviour = new SequentialBehaviour();
+        }
+
         /**
          * Talk with other agent
          */
-
         public talkWithOtherAgent(Agent a, long period) {
             super(a, period);
         }
 
         @Override
         protected void onTick() {
-
+            /**
+             * Asking and Update knowledge
+             */
+            behaviour.addSubBehaviour(new askingPosition());
+            behaviour.addSubBehaviour(new upDateAPKnowledge());
         }
     }
-    private class AreaProximityBehavior extends TickerBehaviour{
-
-        public AreaProximityBehavior(Agent a, long period) {
-            super(a, period);
-        }
-
+    private class askingPosition extends OneShotBehaviour{
+        /**
+         * Talk to other aircraft which fall under AP
+         */
         @Override
-        protected void onTick() {
+        public void action() {
+            ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+            msg.setConversationId(AgentMessage.locationRequestID);
+            try {
+                DFAgentDescription[] result = DFService.search(myAgent, aircraftTemplate);
+                if (result.length > 0) {
+                    msg.addReceiver(result[0].getName());
+                    myAgent.send(msg);
+                } else {
+                    System.out.println("No Agent");
+                }
+            }catch (FIPAException fe){
+                fe.printStackTrace();
+            }
+        }
 
+    }
+    private class upDateAPKnowledge extends OneShotBehaviour{
+        private MessageTemplate template = MessageTemplate.MatchConversationId(AgentMessage.locationRequestID);
+        @Override
+        public void action() {
+            ACLMessage message = receive(template);
+            if(message != null){
+                String[] msg = message.getContent().split("-");
+                if(msg.length > 0){
+                    int current = Integer.parseInt(msg[0]);
+                    int total  = Integer.parseInt(msg[1]);
+                    if(current > total/2){
+                        aircraftAgent.add(ScheduleFactory.searchAircraft(message.getSender().getLocalName()));
+                    }
+                }
+            }else {
+                block();
+            }
 
         }
     }
-    /**
-     * Member variable
-     */
-    private Vector<String> aircraftAgent;
-    private List<Boolean> runWay;
-    private Airport airport;
 
     @Override
     protected void setup() {
@@ -122,8 +160,15 @@ public class StationAgent extends BaseAgent{
         /**
          * Initialize members
          */
-        aircraftAgent = new Vector<>();
+        aircraftAgent = new ArrayList<>();
         runWay = new ArrayList<>();
+
+        aircraftTemplate = new DFAgentDescription();
+        aircraftdescription = new ServiceDescription();
+        aircraftdescription.setType(AgentMessage.aircraftAgentType);
+        aircraftdescription.addOntologies(getLocalName());
+        aircraftTemplate.addServices(aircraftdescription);
+
         //System.out.println("Number of run way" + runWay.size());
         for(int i = 0 ; i < 4 ; ++i){
             runWay.add(true);
@@ -152,6 +197,7 @@ public class StationAgent extends BaseAgent{
         // Add Behaviour
         addBehaviour(new InitiateAircraft());
         addBehaviour(new runWayRequestServer());
+        addBehaviour(new talkWithOtherAgent(this,1000));
         //addBehaviour(new AreaProximityBehavior(this,1000));
         //addBehaviour(new informGUIPosition());
     }
