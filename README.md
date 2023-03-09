@@ -14,12 +14,12 @@ To get started with this project, follow these steps:
 ## Prerequisites
 To run this project, you will need the following:
 
-Java 8 or higher
-Maven
+- Java 8 or higher
+- Maven
 ## Dependencies
 This project uses the following dependencies:
 
-JADE 4.5.0
+- JADE 4.5.0
 ## Usage
 Once the simulation is running, you can view the output in both console and GUI. The GUI will display the actions taken by the planes and air traffic controllers as they negotiate routes and ensure safety.
 
